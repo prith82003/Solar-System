@@ -18,15 +18,17 @@ public class GameController : MonoBehaviour
     public GameObject relativeBody;
     public bool autoUpdateSim;
     public bool updatePredictions;
+    public static Action LinePop;
 
     [Header("Focus")]
     public bool focus;
     public GameObject focusObject;
     public static event Action ClearPoints;
+    Stopwatch totalTime;
 
     private void Start()
     {
-        ClearPoints();
+        ClearPoints?.Invoke();
         LineDrawer.DrawLine = false;
         init = true;
     }
@@ -75,16 +77,34 @@ public class GameController : MonoBehaviour
                 // body.DrawInitVel();
             }
         }
-        if (!isPaused)
+        if (!isPaused && LineDrawer.DrawLine)
+        {
+            totalTime = new Stopwatch();
+            totalTime.Start();
             init = false;
+            LinePop?.Invoke();
+        }
     }
-
-    public static BodyStats[] celestialBodies;
 
     // Loop Through Each planet
     // Store projected velocity
     // Store projected positions
+
     public void PredictPositions()
+    {
+        if (isPaused)
+            Predict();
+        else
+            PredictPush();
+    }
+
+    CelestialBody[] bodies;
+    BodyStats[] celestialBodies;
+    int relBody;
+
+    // ! Refactor so that its Recursive instead of Iterative, Doesn't simulate old data again and again
+    // ! Initialise data at start
+    public void Predict()
     {
         if (!LineDrawer.DrawLine) return;
         UnityEngine.Debug.Log("Predicting");
@@ -92,13 +112,13 @@ public class GameController : MonoBehaviour
         sw.Start();
         ClearPoints?.Invoke();
         // LineDrawer.DrawLine = true;
-        CelestialBody[] bodies = GameObject.FindObjectsOfType<CelestialBody>();
+        bodies = GameObject.FindObjectsOfType<CelestialBody>();
         celestialBodies = new BodyStats[bodies.Length];
-        int relBody = -1;
+        relBody = -1;
 
         for (int i = 0; i < bodies.Length; i++)
         {
-            Vector3 initVel = bodies[i].initVel * CelestialBody.INIT_VEL_MULT;
+            Vector3 initVel = bodies[i].velocity * CelestialBody.INIT_VEL_MULT;
 
             if (!isPaused)
                 initVel = bodies[i].velocity;
@@ -125,9 +145,9 @@ public class GameController : MonoBehaviour
             //};
 
             //planetSim.Invoke();
-            
+
             // Method 2:
-            DebugSimulate(bodies, relBody, Time.fixedDeltaTime);
+            DebugSimulate(Time.fixedDeltaTime);
 
             // Method 3:
             //var fxd = Time.fixedDeltaTime;
@@ -140,7 +160,7 @@ public class GameController : MonoBehaviour
         WriteLine("Time Taken: " + sw.ElapsedMilliseconds + "ms");
     }
 
-    void DebugSimulate(CelestialBody[] bodies, int relBody, float timeStep)
+    void DebugSimulate(float timeStep)
     {
         for (int debugIndex = 0; debugIndex < bodies.Length; debugIndex++)
         {
@@ -148,6 +168,48 @@ public class GameController : MonoBehaviour
             celestialBodies[debugIndex] = bodies[debugIndex].PredictPosition(celestialBodies, celestialBodies[debugIndex], relBody, true, timeStep);
             // Debug.Log("After Sim: " + celestialBodies[i].ToString());
         }
+    }
+
+    // public void InitialiseData()
+    // {
+    //     bodies = GameObject.FindObjectsOfType<CelestialBody>();
+    //     celestialBodies = new BodyStats[bodies.Length];
+    //     int relBody = -1;
+
+    //     for (int i = 0; i < bodies.Length; i++)
+    //     {
+    //         Vector3 initVel = bodies[i].initVel * CelestialBody.INIT_VEL_MULT;
+
+    //         if (isPaused)
+    //             initVel = bodies[i].velocity;
+
+    //         bodies[i].lr.positionCount = 0;
+    //         if (relativeTo)
+    //         {
+    //             if (bodies[i].transform.position == relativeBody.transform.position)
+    //                 relBody = i;
+    //         }
+
+    //         celestialBodies[i] = new BodyStats(initVel, bodies[i].transform.position, bodies[i].mass, i, bodies[i].gameObject);
+    //     }
+    //     debugId = 0;
+    // }
+    public void PredictPush()
+    {
+        if (!LineDrawer.DrawLine) return;
+        UnityEngine.Debug.Log("Predicting");
+
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
+
+        for (int i = 0; i < celestialBodies.Length; i++)
+        {
+            celestialBodies[i] = bodies[i].PredictPosition(celestialBodies, celestialBodies[i], relBody, true, Time.fixedDeltaTime);
+        }
+
+        sw.Stop();
+
+        WriteLine("Time Taken: " + sw.ElapsedMilliseconds + "ms");
     }
 
     void OnValidate()
@@ -171,8 +233,8 @@ public class GameController : MonoBehaviour
         EditorApplication.playModeStateChanged += CloseFile;
     }
 
-    static StreamWriter writer;
-    static void InitFile()
+    StreamWriter writer;
+    void InitFile()
     {
         string pathPre = "./Assets/Logs/Log";
         string pathPost = ".txt";
@@ -189,7 +251,7 @@ public class GameController : MonoBehaviour
         writer.WriteLine("Log Started");
     }
 
-    static void WriteLine(string arg)
+    void WriteLine(string arg)
     {
         if (writer == null)
             return;
@@ -198,13 +260,31 @@ public class GameController : MonoBehaviour
         writer.WriteLine(arg);
     }
 
-    static void CloseFile(PlayModeStateChange pms)
+    void CloseFile(PlayModeStateChange pms)
     {
         ClearPoints?.Invoke();
         if (pms == PlayModeStateChange.ExitingPlayMode)
         {
+            totalTime.Stop();
+            writer.WriteLine("Play Time: " + totalTime.ElapsedMilliseconds + "ms");
             writer.WriteLine("Log Closed");
             writer.Close();
         }
+    }
+}
+
+[Serializable]
+public class SimulationData
+{
+    // Stores all the latest data for simulation
+    public BodyStats[] celestialBodies;
+    public CelestialBody[] bodies;
+    public int relBody;
+
+    public SimulationData(BodyStats[] celestialBodies, CelestialBody[] bodies, int relBody)
+    {
+        this.celestialBodies = celestialBodies;
+        this.bodies = bodies;
+        this.relBody = relBody;
     }
 }

@@ -51,7 +51,6 @@ public class CelestialBody : MonoBehaviour
 
     }
     public Vector3 velocity;
-    public Vector3 initVel;
     private void Awake()
     {
         lr = GetComponent<LineRenderer>();
@@ -60,7 +59,7 @@ public class CelestialBody : MonoBehaviour
     public void Init()
     {
         Debug.Log("Initialised");
-        this.velocity = initVel * INIT_VEL_MULT;
+        this.velocity = velocity * INIT_VEL_MULT;
     }
 
     public void Simulate()
@@ -95,7 +94,7 @@ public class CelestialBody : MonoBehaviour
 
     public void DrawInitVel()
     {
-        Vector3[] lrPoints = new Vector3[2] { transform.position + transform.lossyScale.x * initVel.normalized, transform.position + transform.lossyScale.x * initVel.normalized + INIT_LR_VEL_MULT * initVel };
+        Vector3[] lrPoints = new Vector3[2] { transform.position + transform.lossyScale.x * velocity.normalized, transform.position + transform.lossyScale.x * velocity.normalized + INIT_LR_VEL_MULT * velocity };
         lr.SetPositions(lrPoints);
     }
 

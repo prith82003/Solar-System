@@ -68,7 +68,7 @@ public class UIController : MonoBehaviour
             var tc = PlanetDetailsObj.transform.parent.GetChild(0).GetComponent<TabController>();
             if (tc.isMinimised)
                 ToggleTab(tc);
-            
+
             StartCoroutine(OnPlanetClick(ray));
         }
         else
@@ -156,7 +156,7 @@ public class UIController : MonoBehaviour
         if (LineDrawer.DrawLine)
         {
             predictToggleCheckbox.sprite = UIHelper.GetCheckBoxCheckedPNG();
-            gc.PredictPositions();
+            gc.Predict();
         }
         else
             predictToggleCheckbox.sprite = UIHelper.GetCheckBoxEmptyPNG();
@@ -174,7 +174,7 @@ public class UIController : MonoBehaviour
         else
             predictRelativeCheckbox.sprite = UIHelper.GetCheckBoxEmptyPNG();
 
-        gc.PredictPositions();
+        gc.Predict();
     }
 
     public void RelativeTo()
@@ -263,7 +263,7 @@ public class UIController : MonoBehaviour
         var startPos = Input.mousePosition;
         var celestialBody = hit.transform.GetComponent<CelestialBody>();
 
-        if (!(gc.isPaused && gc.init))
+        if (!(gc.isPaused))
             yield break;
 
         while (Input.GetMouseButton(0))
@@ -276,8 +276,8 @@ public class UIController : MonoBehaviour
             diff.y = diff.z;
             diff.z = temp;
 
-            celestialBody.initVel += diff * velMultiplier;
-            gc.PredictPositions();
+            celestialBody.velocity += diff * velMultiplier;
+            gc.Predict();
 
             yield return null;
         }

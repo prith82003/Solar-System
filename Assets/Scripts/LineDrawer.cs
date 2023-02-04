@@ -16,6 +16,13 @@ public class LineDrawer : MonoBehaviour
     private void Awake()
     {
         GameController.ClearPoints += Clear;
+        GameController.LinePop += Pop;
+    }
+
+    void Pop()
+    {
+        if (line.Count > 0)
+            line.RemoveAt(0);
     }
 
     void Clear()
